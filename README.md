@@ -1,4 +1,4 @@
-# 海光单卡 RMSNorm 最小复现
+#  RMSNorm 优化复现
 
 使用九齿实现 128 维 RMSNorm，通过原生桥接接入 InfiniCore，并重新运行正确性与配对性能测试。仓库仅包含实现、必要脚本和依赖版本；测试结果在运行时生成。
 
@@ -8,27 +8,15 @@ Linux x86_64，海光 gfx906，Python 3.11.9、镜像自带的海光 PyTorch 2.9
 
 ## 运行
 
-在自己的海光机器或容器中执行：
-
 ```bash
 git clone --branch rms128-20261016 --depth 1 https://github.com/Yuuki-git/songshan3.git songshan3
 cd songshan3
 bash scripts/reproduce.sh
 ```
 
-脚本获取固定版本的 InfiniCore、九齿和构建依赖，在 `venvs/h3` 安装额外 Python 包，以并发 8 构建原始 Core 和主机桥接，然后串行运行 RMSNorm 测试。原始源码保存在 `Projects`，九齿改动应用于独立的 `development/ninetoothed-hygon`。模型权重不参与本实验。
+脚本获取固定版本的 InfiniCore、九齿和构建依赖，在 `venvs/h3` 安装额外 Python 包，以并发 8 构建原始 Core 和主机桥接，然后串行运行 RMSNorm 测试。原始源码保存在 `Projects`，九齿 `development/ninetoothed-hygon`。
 
-如果海光机器不能联网，先在联网机器上准备输入：
 
-```bash
-bash scripts/prepare.sh --download-only
-```
-
-将整个工程复制到海光环境，保留源码的 `.git` 和子模块元数据，然后运行：
-
-```bash
-bash scripts/reproduce.sh --offline
-```
 
 已有同工程独立构建环境时，可用 `bash scripts/reproduce.sh --skip-build` 直接重新构建桥接并运行测试。工程目录名保持为 `songshan3`，父目录可自由选择，无需团队 SSH 账号或固定用户目录。
 
