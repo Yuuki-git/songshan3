@@ -1,0 +1,26 @@
+# Minimal RMSNorm reproduction source; generated data stays local.
+/*
+!/.gitignore
+!/.gitattributes
+!/README.md
+!/requirements.txt
+!/benchmarks/
+!/development/
+!/scripts/
+/benchmarks/*
+!/benchmarks/h3_operator_baseline.py
+!/benchmarks/hygon_rmsnorm_probe.py
+!/benchmarks/hygon_rmsnorm_acceptance.py
+!/benchmarks/hygon_native.py
+!/benchmarks/probe_hip_properties.cpp
+/development/*
+!/development/hygon_aot.py
+!/development/core_ninetoothed_bridge.cpp
+/scripts/*
+!/scripts/apply_hygon_aot_patch.py
+!/scripts/patch_triton_dtk.py
+!/scripts/prepare.sh
+!/scripts/reproduce.sh
+!/scripts/setup_env.sh
+__pycache__/
+*.py[cod]

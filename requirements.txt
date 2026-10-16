@@ -1,0 +1,17 @@
+editables==0.5
+hatchling==1.32.4
+iniconfig==2.3.0
+janus==2.0.0
+ninetoothed==0.26.0
+numpy==1.26.4
+packaging==26.3
+pathspec==1.1.1
+pluggy==1.7.0
+pygments==2.19.2
+pytest==9.0.2
+setuptools==84.0.0
+tomlkit==0.13.3
+triton==3.8.0
+trove-classifiers==2026.9.21.13
+wheel==0.48.0
+xxhash==4.0.1
