@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Prepare exactly the Core/NineToothed environment required by RMSNorm.
 set -euo pipefail
+export GIT_LFS_SKIP_SMUDGE=1
 task_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 export WORK_HOME
 WORK_HOME=$(dirname -- "$task_root")
