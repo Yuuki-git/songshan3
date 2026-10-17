@@ -1,68 +1,51 @@
-# MiniMax H3 单卡算子优化复现
+# MiniMax H3 算子优化复现
 
-使用九齿实现二维 RMSNorm、真实 Q/K 切片布局的三维 RMSNorm，以及三维 AdaLN/门控残差融合，经原生 AOT 接入 InfiniCore。一个入口完成固定输入校验、独立环境构建、串行验收和原始计时汇总。
+参照二维 RMSNorm 的最小交付形式，统一复现三项工作：二维 128 维 RMSNorm、三维 Q/K RMSNorm，以及三维 AdaLN/门控残差融合。仓库只保留实现、必要的主机适配和下载构建运行脚本，实验结果在运行时生成。
 
-当前范围为海光 gfx906 单卡算子和逐元素子图。主办方 H3 权重、样例与固定配置尚未取得，完整 FL2VA、生成质量、多卡及模型端到端收益尚未验收。
+## 环境
 
-## 开始复现
+Linux x86_64、海光 gfx906，Python 3.11.9、镜像自带海光 PyTorch 2.9.0、HIP 6.3.26093，以及 Git、curl、make、CMake、g++、flock 和 timeout。DTK 位于 `/opt/dtk`，Torch 库位于 `/usr/local/lib/python3.11/site-packages/torch/lib` 和 `torch.libs`，沿用第一个算子的基础镜像布局。
 
-在 Linux x86_64 海光环境中执行：
+额外 Python 包只安装到工程的 `venvs/h3`，原生库放在 `infini`。构建并发为 8，GPU 实验串行。工程可以放在自己的工作目录，不依赖团队 SSH 账号或已有实验目录。
+
+## 运行
 
 ```bash
-git clone https://github.com/Yuuki-git/songshan3.git songshan3
+git clone --branch codex/unified-operator-reproduction --depth 1 https://github.com/Yuuki-git/songshan3.git songshan3
 cd songshan3
-bash scripts/reproduce.sh --suite all
+bash scripts/reproduce.sh
 ```
 
-如果使用开发分支，请在 `git clone` 时用 `--branch` 选择该分支。保存本次检出的 `git rev-parse HEAD`，后续按这个提交复现。原 `rms128-20261016` 标签保持为二维最小交付，不包含本次新增的三维和融合流程。
-
-基础镜像保留海光 PyTorch 2.9.0、Python 3.11.9、HIP 6.3.26093 和 `/opt/dtk`。还需 Git、g++、make、CMake、curl、flock 和 timeout。脚本只在工程独立 venv 安装额外 Python 依赖，以并发 8 构建 Core；InfiniLM 源码用于固定模型布局依据，不在算子流程中构建或执行模型。安装位置与基线镜像的具体要求见 [完整复现说明](REPRODUCE.md)。
-
-## 选择任务
-
-| 参数 | 执行内容 |
-| --- | --- |
-| `--suite all` | 以下三项，依次执行，默认选项 |
-| `--suite rms2d` | 二维 128 维 RMSNorm 四路径、冻结用例、Core 列表重放及配对计时 |
-| `--suite rms3d` | 三维候选、四路径、独立 C++、回退/原地检查及同步 API/实际 HIP 图 |
-| `--suite fusion3d` | AdaLN/门控残差五路径、独立 C++、守卫及单算子/四节点子图配对 |
+默认运行全部三项，也可单独选择：
 
 ```bash
+bash scripts/reproduce.sh --suite rms2d
 bash scripts/reproduce.sh --suite rms3d
-bash scripts/reproduce.sh --offline --skip-build --suite all
-bash scripts/reproduce.sh --list
+bash scripts/reproduce.sh --suite fusion3d
 ```
 
-`--skip-build` 只复用当前检出目录已经准备好的独立 venv、原生库与输入；本次的桥接、AOT 导出、检查和计时仍重新生成。它不表示已验证全新基础镜像重建。
+脚本准备固定版本源码和依赖，构建 Core、九齿 AOT 和主机桥接，然后运行原有算子数值比较与配对计时。三维和融合的 HIP 图计时直接使用本次新生成的 AOT 导出。
 
-## 联网准备与离线执行
-
-准备阶段只需 Python 3.10+ 和 Git，不加载 DTK、不安装包、不访问 GPU，也可在 Windows 联网机器运行：
+海光机器不联网时，先在联网机器上用 Bash 准备：
 
 ```bash
-python scripts/reproduce.py --prepare-only
+bash scripts/reproduce.sh --prepare-only
 ```
 
-把准备后的完整工程复制到海光环境，保留 `Projects`、`tooling/xmake-repo` 的 Git 元数据以及下载文件，然后执行：
+复制整个已准备工程到海光环境，保留源码 Git 和子模块元数据，然后执行：
 
 ```bash
-bash scripts/reproduce.sh --offline --suite all
+bash scripts/reproduce.sh --offline
 ```
 
-四个官方源码仓库、子模块、三个构建依赖和 17 个准确 wheel 按 [输入清单](manifests/upstreams.json)、[wheel 校验清单](manifests/workstation-wheels.json) 和 [带哈希的安装锁文件](requirements-lock.txt) 核验。已存在文件不符时停止，不重置原始源码或替换镜像 PyTorch。
+已有当前工程的独立环境时，使用 `bash scripts/reproduce.sh --skip-build` 重新生成 AOT、桥接和实验结果。该选项不重新构建基础 Core。
 
-## 查看输出
+## 代码与结果
 
-终端打印新的 `results/reproduction-时间戳-随机后缀`。其中 `run.json` 记录本次仓库提交、代码哈希、命令、退出码和各阶段的新结果目录，主实验成功后自动把路径传给其补充实验。失败即停止，并保留阶段日志。
+`benchmarks` 保存九齿表达式、原有数值参考和计时程序；`development` 保存海光 AOT 主机适配和 Core 桥接；`scripts` 保存最少运行入口。原始 Core 源码和官方脚本不修改，新增设备计算由九齿编译链生成。
 
-| 文件 | 内容 |
-| --- | --- |
-| `run.json`、`exit-code.txt` | 本次调用的状态、配置和退出码 |
-| `summary.json` | 正确性、分派、重放及环境不变量核验 |
-| `paired-summary.csv` | 从本次五轮原始时间重算的中位数和倍率，各计时方式分列 |
-| `checksums.json` | 本次实验产物的 SHA256 |
-| 各阶段 `.log`、`.result-path` | 完整阶段日志及实际新建目录 |
+每次运行创建新的 `results/hygon-operators-*`，下面按 `rms2d`、`rms3d`、`fusion3d` 分目录保存原始误差、五轮计时、生成代码、原生库和日志。顶层 `exit-code.txt` 是本次退出码。Core 算子列表重放和实际 HIP 图分别记录；它们的事件耗时不等于纯内核指令时间。
 
-每个实验另保存种子、形状、stride、容差、逐例误差、原始计时、生成代码、AOT 库和环境快照。同步 API、Core 算子列表重放、实际 HIP 图分别标注，事件耗时不等于纯内核指令时间。
+固定源码为 InfiniCore `f32e2fbb2a9b2ca912b5711f4f3836c403196a74`、NineToothed `2c5eb118592f4d2b0f448d16d2e9a3a5c0fbc900`、xmake-repo `bd29d77f242e247589457638272d9936a24a3fe0`；xmake 为 3.0.5、Boost 为 1.92.0、pybind11 为 3.1.0。Python 包版本见 `requirements.txt`。原 `rms128-20261016` 标签仍对应二维最小交付。
 
-[算子技术报告](docs/OPERATOR_REPORT.md)汇总已测量的优化结果；[本次交付验证记录](docs/REPRODUCTION_VALIDATION.md)说明统一入口实际完成的检查与限制。GitHub Actions 只做不需要 GPU 的静态与调度检查，不将 CI 通过记为海光或完整模型验收。
+本仓库复现范围是单卡算子与逐元素子图。主办方 H3 权重、样例及固定配置尚未取得，完整 FL2VA、生成质量、多卡和模型端到端收益尚未验收。
