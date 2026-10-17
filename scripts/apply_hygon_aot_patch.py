@@ -67,6 +67,8 @@ for relative, text in edits.items():
     original = (baseline / relative).read_text() if (baseline / relative).is_file() else ""
     target = development / relative
     assert target.resolve().is_relative_to(development.resolve())
+    if target.exists() and target.read_text() not in (original, text):
+        raise RuntimeError(f"Refusing to overwrite an unrelated backend modification: {relative}")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text)
     manifest[relative] = dict(

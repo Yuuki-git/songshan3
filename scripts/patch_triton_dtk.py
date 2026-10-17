@@ -19,6 +19,8 @@ if triton.__version__ != "3.8.0" or not probe["arch"].startswith("gfx906"):
 if not Path("/opt/dtk/lib/libgalaxyhip.so").exists():
     raise RuntimeError("DTK's vendor HIP library was not found")
 source = Path(triton.__file__).parent / "backends/amd/driver.c"
+if not source.resolve().is_relative_to((root / "venvs/h3").resolve()):
+    raise RuntimeError("Refusing to patch Triton outside this checkout's independent venv")
 patch_dir = root / "patches/triton-3.8.0-dtk-property-abi"
 patch_dir.mkdir(parents=True, exist_ok=True)
 original_path = patch_dir / "driver.c.original"
