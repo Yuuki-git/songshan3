@@ -1,7 +1,5 @@
 # MiniMax H3 算子优化复现
 
-本仓库在 `main` 主分支统一提供三项算子优化的最小复现文件，沿用第一个二维 RMSNorm 的交付形式：算子实现、必要的主机适配和下载构建运行脚本。实验结果在运行时生成。
-
 | 优化对象 | 输入形状 | 输入精度 | 九齿实现 |
 | --- | --- | --- | --- |
 | 二维 RMSNorm | `[M, 128]` | FP16、BF16、FP32 | [hygon_rmsnorm_probe.py](benchmarks/hygon_rmsnorm_probe.py) |
@@ -12,9 +10,7 @@
 
 ## 环境
 
-Linux x86_64、海光 gfx906，Python 3.11.9、镜像自带海光 PyTorch 2.9.0、HIP 6.3.26093，以及 Git、curl、make、CMake、g++、flock 和 timeout。DTK 位于 `/opt/dtk`，Torch 库位于 `/usr/local/lib/python3.11/site-packages/torch/lib` 和 `torch.libs`，沿用第一个算子的基础镜像布局。
-
-额外 Python 包只安装到工程的 `venvs/h3`，原生库放在 `infini`。构建并发为 8，GPU 实验串行。工程可以放在自己的工作目录，不依赖团队 SSH 账号或已有实验目录。
+Linux x86_64、海光 gfx906，Python 3.11.9、镜像自带海光 PyTorch 2.9.0、HIP 6.3.26093，以及 Git、curl、make、CMake、g++、flock 和 timeout。DTK 位于 `/opt/dtk`，Torch 库位于 `/usr/local/lib/python3.11/site-packages/torch/lib` 和 `torch.libs`。
 
 ## 运行
 
@@ -34,30 +30,12 @@ bash scripts/reproduce.sh --suite fusion3d
 
 脚本准备固定版本源码和依赖，构建 Core、九齿 AOT 和主机桥接，然后运行原有算子数值比较与配对计时。三维和融合的 HIP 图计时直接使用本次新生成的 AOT 导出。
 
-海光机器不联网时，先在联网机器上用 Bash 准备：
-
-```bash
-bash scripts/reproduce.sh --prepare-only
-```
-
-复制整个已准备工程到海光环境，保留源码 Git 和子模块元数据，然后执行：
-
-```bash
-bash scripts/reproduce.sh --offline
-```
-
-已有当前工程的独立环境时，可跳过基础 Core 构建，重新生成 AOT、桥接和实验结果：
-
-```bash
-bash scripts/reproduce.sh --skip-build
-```
-
 ## 代码与结果
 
 [`benchmarks`](benchmarks) 保存九齿表达式、原有数值参考和计时程序；[`development`](development) 保存海光 AOT 主机适配和 Core 桥接；[`scripts/reproduce.sh`](scripts/reproduce.sh) 是统一运行入口。原始 Core 源码和官方脚本保持不变，新增设备计算由九齿编译链生成。
 
 每次运行创建新的 `results/hygon-operators-*`，按 `rms2d`、`rms3d`、`fusion3d` 保存原始数值比较、五轮计时、生成代码、原生库和日志。Core 算子列表重放和实际 HIP 图分别记录；它们的事件耗时不等于纯内核指令时间。
 
-InfiniCore、NineToothed 和构建依赖的固定版本见 [`scripts/prepare.sh`](scripts/prepare.sh)，Python 包版本见 [`requirements.txt`](requirements.txt)。原 `rms128-20261016` 标签仍对应二维最小交付；三项统一复现使用 `main`。
+InfiniCore、NineToothed 和构建依赖的固定版本见 [`scripts/prepare.sh`](scripts/prepare.sh)，Python 包版本见 [`requirements.txt`](requirements.txt)。
 
-本仓库复现范围是单卡算子与逐元素子图。主办方 H3 权重、样例及固定配置尚未取得，完整 FL2VA、生成质量、多卡和模型端到端收益尚未验收。
+本仓库复现范围是单卡算子与逐元素子图。主办方 H3 权重、样例及固定配置尚未取得，完整 FL2VA、生成质量、多卡、和模型端到端收益尚未验收。
