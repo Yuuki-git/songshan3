@@ -2,6 +2,8 @@
 
 参照二维 RMSNorm 的最小交付形式，统一复现三项工作：二维 128 维 RMSNorm、三维 Q/K RMSNorm，以及三维 AdaLN/门控残差融合。仓库只保留实现、必要的主机适配和下载构建运行脚本，实验结果在运行时生成。
 
+三项工作的最小复现文件已发布于 `codex/unified-operator-reproduction` 分支，并已在独立海光环境完成离线重建和运行。下方命令直接获取该分支。
+
 ## 环境
 
 Linux x86_64、海光 gfx906，Python 3.11.9、镜像自带海光 PyTorch 2.9.0、HIP 6.3.26093，以及 Git、curl、make、CMake、g++、flock 和 timeout。DTK 位于 `/opt/dtk`，Torch 库位于 `/usr/local/lib/python3.11/site-packages/torch/lib` 和 `torch.libs`，沿用第一个算子的基础镜像布局。
